@@ -5,18 +5,8 @@
       <v-btn flat @click="alert.visible = false">Close</v-btn>
     </v-snackbar>
     <v-navigation-drawer :clipped="$vuetify.breakpoint.lgAndUp" v-model="drawer" fixed app>
-      <v-list dense>
+      <v-list dense v-if="this.$user">
         <template v-for="item in items">
-          <v-layout v-if="item.heading" :key="item.heading" row align-center>
-            <v-flex xs6>
-              <v-subheader v-if="item.heading">
-                {{ item.heading }}
-              </v-subheader>
-            </v-flex>
-            <v-flex xs6 class="text-xs-center">
-              <a href="#!" class="body-2 black--text">EDIT</a>
-            </v-flex>
-          </v-layout>
           <v-list-tile :key="item.text" @click="handleSelected(item.text)">
             <v-list-tile-action>
               <v-icon>{{ item.icon }}</v-icon>
@@ -29,80 +19,63 @@
           </v-list-tile>
         </template>
       </v-list>
+      <v-alert :value="true" color="grey lighten-1" icon="warning" v-else>请登入账号</v-alert>
     </v-navigation-drawer>
-    <v-toolbar :clipped-left="$vuetify.breakpoint.lgAndUp" color="blue darken-3" dark app fixed>
-      <v-toolbar-title style="width: 240px" class="ml-0 pl-0">
+    <v-toolbar :clipped-left="$vuetify.breakpoint.lgAndUp" color="blue-grey darken-4" dark app fixed>
+      <v-toolbar-title>
         <v-layout  justify-center align-center>
           <v-toolbar-side-icon @click.stop="drawer = !drawer"></v-toolbar-side-icon>
-          <span>Smart Management</span>
+          <span>Management</span>
         </v-layout>
       </v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn icon large>
+      <v-btn icon large v-if="this.$user">
         <v-tooltip bottom>
           <v-avatar size="34px" slot="activator">
             <img src="http://p0.ifengimg.com/a/2018_45/bcc07f5bc8bf9cf_size26_w640_h584.jpg" alt="Vuetify">
           </v-avatar>
-          <span>User Center</span>
+          <span>用户中心</span>
         </v-tooltip>
       </v-btn>
-      <v-subheader class="hidden-md-and-down">Username</v-subheader>
-      <v-tooltip bottom>
-        <v-btn icon slot="activator">
+      <v-subheader class="hidden-md-and-down" v-if="this.$user">{{ this.$user.username }}</v-subheader>
+      <v-tooltip bottom v-if="this.$user">
+        <v-btn icon slot="activator" @click="logout">
           <v-icon>exit_to_app</v-icon>
         </v-btn>
-        <span>Exit</span>
+        <span>登出</span>
+      </v-tooltip>
+      <v-tooltip bottom v-if="!this.$user">
+        <v-btn icon slot="activator">
+          <v-icon>person</v-icon>
+        </v-btn>
+        <span>登入</span>
       </v-tooltip>
     </v-toolbar>
     <v-content>
       <v-container fluid fill-height>
-        <v-layout justify-center>
-          <v-flex xs11>
-            <!--data table-->
-            <v-data-table :headers="headers" :items="desserts" class="elevation-1" loading>
-              <template slot="no-data">
-                <v-alert :value="true" color="error" icon="warning">Sorry, nothing to display here :(</v-alert>
-              </template>
-              <template slot="items" slot-scope="props">
-                <td class="text-xs-center">{{ props.item.name }}</td>
-                <td class="text-xs-center">{{ props.item.calories }}</td>
-                <td class="text-xs-center">{{ props.item.fat }}</td>
-                <td class="text-xs-center">{{ props.item.carbs }}</td>
-                <td class="text-xs-center">{{ props.item.iron }}</td>
-                <td class="text-xs-center" style="padding: 14px;" width="360">
-                  <v-card>
-                    <v-card-title primary-title>
-                      <div>
-                        <div v-if="props.item.remarks">{{ props.item.remarks }}</div>
-                        <div v-else class="grey--text">
-                          Empty remarks
-                        </div>
-                      </div>
-                    </v-card-title>
-                    <v-card-actions>
-                      <v-spacer></v-spacer>
-                      <v-btn small color="blue" class="white--text" @click="editRemarksDialog = true">EDIT
-                        <v-icon right small>create</v-icon>
-                      </v-btn>
-                    </v-card-actions>
-                  </v-card>
-                </td>
-              </template>
-            </v-data-table>
-            <!--edit dialog-->
-            <v-dialog v-model="editRemarksDialog" max-width="460">
-              <v-card>
-                <v-card-title class="headline">Edit remarks</v-card-title>
-                <v-textarea outline value="Demo remarks" style="margin: 0 18px"></v-textarea>
-                <v-card-actions>
-                  <v-spacer></v-spacer>
-                  <v-btn color="gray darken-1" flat="flat" @click="editRemarksDialog = false">cancel</v-btn>
-                  <v-btn color="blue darken-1" flat="flat" @click="saveRemarks">save</v-btn>
-                </v-card-actions>
-              </v-card>
-            </v-dialog>
+        <v-layout justify-center v-if="this.$user">
+            <CustomerManagement></CustomerManagement>
+        </v-layout>
+        <v-layout justify-center align-center v-else>
+          <!--login-->
+          <v-flex xs12 sm8 md6 >
+            <v-card class="elevation-12">
+              <v-toolbar dark color="primary">
+                <v-toolbar-title>欢迎</v-toolbar-title>
+              </v-toolbar>
+              <v-progress-linear :indeterminate="isLoginLoading" class="mx-0 my-0" height="5" background-opacity="0" color="primary" buffer-value="3"></v-progress-linear>
+              <v-card-text>
+                <v-form>
+                  <v-text-field prepend-icon="person" name="login" label="用户名" type="text" clearable v-model="loginUser.username"></v-text-field>
+                  <v-text-field id="password" prepend-icon="lock" name="password" label="密码" type="password" clearable v-model="loginUser.password" @keyup.enter="login"></v-text-field>
+                </v-form>
+              </v-card-text>
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="primary" @click="login">登入</v-btn>
+              </v-card-actions>
+            </v-card>
           </v-flex>
-
         </v-layout>
       </v-container>
     </v-content>
@@ -110,70 +83,65 @@
 </template>
 
 <script>
+import CustomerManagement from "./components/CustomerManagement";
 export default {
-  data: () => ({
-    alert: {
-      visible: false,
-      color: "green",
-      timeout: 3000,
-      message: "Successful!"
-    },
-    editRemarksDialog: false,
-    dialog: false,
-    drawer: null,
-    items: [
-      { icon: "person", text: "Employee" },
-      { icon: "group", text: "User groups" },
-      { icon: "record_voice_over", text: "Customers" },
-      { icon: "how_to_reg", text: "Incoming customers" }
-    ],
-    headers: [
-      { text: "Name", value: "name", align:'center' },
-      { text: "Phone number", value: "calories", align:'center' },
-      { text: "Sex", value: "fat", align:'center' },
-      { text: "Birth", value: "carbs", align:'center' },
-      { text: "Visibility user groups", value: "protein", align:'center' },
-      { text: "Remarks", value: "iron", align:'center' }
-    ],
-    desserts: [
-      {
-        value: false,
-        name: "Frozen Yogurt",
-        calories: 159,
-        fat: 6.0,
-        carbs: 24,
-        protein: 4.0,
-        iron: "1%",
-        remarks: "first remarksfirst remarksfirst remarksfirst remarksfirst remarksfirst remarksfirst remarksfirst remarksfirst remarksfirst remarks"
-      },
-      {
-        value: false,
-        name: "Ice cream sandwich",
-        calories: 237,
-        fat: 9.0,
-        carbs: 37,
-        protein: 4.3,
-        iron: "1%",
-        remarks: ""
-      }
-    ]
-  }),
-  props: {
-    source: String
-  },
-  methods: {
-    handleSelected(selected) {
-      alert(selected);
-    },
-    saveRemarks() {
-      this.editRemarksDialog = false;
-      this.alertMessage();
-    },
-    alertMessage(message = "Successful!", color = "green") {
-      this.alert.visible = true;
-      this.alert.color = color;
-      this.alert.message = message;
+    name: 'App',
+    components: {CustomerManagement},
+    data: ()=>({
+        alert: {
+            visible: false,
+            color: "green",
+            timeout: 3000,
+            message: "Successful!"
+        },
+        drawer: null,
+        items: [],
+        isLoginLoading: false,
+        loginUser: {}
+    }),
+    methods: {
+        alertMessage(message = "Successful!", color = "green") {
+            this.alert.visible = true
+            this.alert.color = color
+            this.alert.message = message
+        },
+        login() {
+            if (this.loginUser.username && this.loginUser.password){
+                this.isLoginLoading = true
+                setTimeout(()=>{
+                    this.$post('/user/login', this.loginUser, (data)=>{
+                        this.alertMessage(data.message)
+                        this.$user = {
+                            id: data['content']['id'],
+                            username: data['content']['username'],
+                            type: data['content']['type']
+                        }
+                        if (this.$user.type === 'EMPLOYEE') {
+                            this.items = [
+                                { icon: "record_voice_over", text: "客户" },
+                                { icon: "how_to_reg", text: "入件客户" }
+                            ]
+                        } else if (this.$user.type === 'ADMINISTRATOR') {
+                            this.items = [
+                                { icon: "person", text: "职员" },
+                                { icon: "group", text: "职员用户组" },
+                                { icon: "record_voice_over", text: "客户" },
+                                { icon: "how_to_reg", text: "入件客户" }
+                            ]
+                        }
+                        this.isLoginLoading = false
+                        this.loginUser = {}
+                    }, (errorMessage)=>{
+                        this.alertMessage(errorMessage, 'error')
+                        this.isLoginLoading = false
+                    })
+                }, 1000)
+            }
+        },
+        logout() {
+            this.$user = null
+            this.alertMessage('logout successful')
+        }
     }
-  }
 };
 </script>

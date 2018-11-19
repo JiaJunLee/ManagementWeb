@@ -1,0 +1,385 @@
+<template>
+    <v-flex xs12>
+        <v-snackbar :color="alert.color" v-model="alert.visible" :timeout="alert.timeout" top>
+            {{ alert.message }}
+            <v-btn flat @click="alert.visible = false">Close</v-btn>
+        </v-snackbar>
+        <v-toolbar flat color="blue-grey" dark>
+            <v-toolbar-title class="text-no-wrap">客户管理</v-toolbar-title>
+            <v-divider class="mx-3" inset vertical></v-divider>
+            <v-spacer></v-spacer>
+            <div class="hidden-sm-and-down">
+                <v-btn color="green lighten-1" small>批量添加可见职员用户组
+                    <v-icon class="ml-1" small>rss_feed</v-icon>
+                </v-btn>
+                <v-btn color="white" small light>添加
+                    <v-icon class="ml-1" small>add</v-icon>
+                </v-btn>
+            </div>
+            <div class="hidden-md-and-up">
+                <v-btn color="green lighten-1" icon>
+                    <v-icon small>rss_feed</v-icon>
+                </v-btn>
+                <v-btn color="white" icon light>
+                    <v-icon small>add</v-icon>
+                </v-btn>
+            </div>
+        </v-toolbar>
+        <!--data table-->
+        <v-data-table :headers="headers" :items="customers" class="elevation-1" loading select-all v-model="selectedItem" item-key="id">
+            <template slot="no-data">
+                <v-alert :value="true" color="grey lighten-1" icon="warning">无数据</v-alert>
+            </template>
+            <template slot="items" slot-scope="props">
+                <td>
+                    <v-checkbox
+                            v-model="props.selected"
+                            color="primary"
+                            hide-details
+                    ></v-checkbox>
+                </td>
+                <td class="text-xs-center">{{ props.item.name }}</td>
+                <td class="text-xs-center">{{ props.item.phoneNumber }}</td>
+                <td class="text-xs-center">{{ props.item.sex}}</td>
+                <td class="text-xs-center px-1">{{ props.item.birth }}</td>
+                <td class="text-xs-center">
+                    <div v-if="props.item.visibilityUserGroups.length === 0">无</div>
+                    <v-scale-transition group>
+                        <div v-for="userGroup in props.item.visibilityUserGroups" :key="userGroup.id">
+                            <v-chip small close color="green" text-color="white" @input="removeVisibilityUserGroup(userGroup, props.item)">{{ userGroup.name }}</v-chip>
+                        </div>
+                    </v-scale-transition>
+                    <v-btn icon color="primary" small @click="showAddVisibilityUserGroupDialog(props.item)">
+                        <v-icon small>add</v-icon>
+                    </v-btn>
+                </td>
+                <td class="text-xs-left px-3 py-3" width="320">
+                    <v-card width="320">
+                        <v-card-title primary-title>
+                            <div>
+                                <div v-if="props.item.remarks">{{ props.item.remarks }}</div>
+                                <div v-else class="grey--text">无</div>
+                            </div>
+                        </v-card-title>
+                        <v-card-actions>
+                            <v-spacer></v-spacer>
+                            <v-btn small color="primary" @click="editRemarksDialog = true" icon>
+                                <v-icon small>create</v-icon>
+                            </v-btn>
+                        </v-card-actions>
+                    </v-card>
+                </td>
+                <td class="text-xs-center px-2 py-2">
+                    <v-btn color="primary" small @click="modifyItem(props.item)">修改
+                        <v-icon small class="ml-1">edit</v-icon>
+                    </v-btn>
+                    <v-btn color="error" small @click="removeItem(props.item)">删除
+                        <v-icon small class="ml-1">remove</v-icon>
+                    </v-btn>
+                </td>
+            </template>
+        </v-data-table>
+        <!--edit dialog-->
+        <v-dialog v-model="editRemarksDialog" max-width="460">
+            <v-card>
+                <v-img class="white--text" height="180px" src="https://picsum.photos/500/300?image=38">
+                    <v-container fill-height fluid>
+                        <v-layout fill-height>
+                            <v-flex xs12 align-end flexbox>
+                                <span class="headline">修改备注</span>
+                            </v-flex>
+                        </v-layout>
+                    </v-container>
+                </v-img>
+                <v-textarea value="Demo remarks" class="px-3 pt-3"></v-textarea>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="gray darken-1" flat="flat" @click="editRemarksDialog = false">取消</v-btn>
+                    <v-btn color="blue darken-1" flat="flat" @click="saveRemarks">保存</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!--modify dialog-->
+        <v-dialog v-model="modifyDialog" max-width="460" v-if="currentModifyItem">
+            <v-card>
+                <v-img class="white--text" height="180px" src="https://picsum.photos/500/300?image=10">
+                    <v-container fill-height fluid>
+                        <v-layout fill-height>
+                            <v-flex xs12 align-end flexbox>
+                                <span class="headline">修改信息</span>
+                            </v-flex>
+                        </v-layout>
+                    </v-container>
+                </v-img>
+                <v-form ref="form" v-model="modifyValid" lazy-validation class="px-3 py-3">
+                    <v-text-field
+                            prepend-icon="person"
+                            v-model="currentModifyItem.name"
+                            :rules="validRules.nameRules"
+                            label="客户姓名"
+                            required
+                    ></v-text-field>
+                    <v-text-field
+                            prepend-icon="call"
+                            v-model="currentModifyItem.phoneNumber"
+                            :rules="validRules.phoneNumberRules"
+                            label="联系电话"
+                            required
+                    ></v-text-field>
+                    <v-radio-group v-model="currentModifyItem.sex" label="性别" row prepend-icon="wc">
+                        <v-radio
+                                v-for="s in sex"
+                                :key="s.name"
+                                :label="s.name"
+                                :value="s.value"
+                                color="primary"
+                        ></v-radio>
+                    </v-radio-group>
+                    <v-menu
+                            :close-on-content-click="false"
+                            v-model="modifyBirthMenu"
+                            :nudge-right="33"
+                            lazy
+                            transition="scale-transition"
+                            offset-y
+                            full-width
+                            min-width="290px"
+                    >
+                        <v-text-field
+                                prepend-icon="event"
+                                slot="activator"
+                                v-model="currentModifyItem.birth"
+                                label="生日"
+                                readonly
+                        ></v-text-field>
+                        <v-date-picker v-model="currentModifyItem.birth" @input="modifyBirthMenu = false"></v-date-picker></v-menu>
+                </v-form>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="gray darken-1" flat="flat" @click="modifyDialog = false">取消</v-btn>
+                    <v-btn color="blue darken-1" flat="flat" @click="saveItem">保存</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!--add visibility user group dialog-->
+        <v-dialog v-model="addVisibilityUserGroupDialog" max-width="460">
+            <v-card>
+                <v-img class="white--text" height="180px" src="https://cdn.vuetifyjs.com/images/parallax/material2.jpg">
+                    <v-container fill-height fluid>
+                        <v-layout fill-height>
+                            <v-flex xs12 align-end flexbox>
+                                <span class="headline">添加可见职员用户组</span>
+                            </v-flex>
+                        </v-layout>
+                    </v-container>
+                </v-img>
+                <v-autocomplete
+                        v-model="selectedUserGroup"
+                        class="px-3 pt-4"
+                        :items="availableUserGroups"
+                        :loading="isLoadingUserGroups"
+                        :search-input.sync="searchAvailableUserGroupsCriteria"
+                        color="primary"
+                        item-text="name"
+                        item-value="id"
+                        label="用户组搜索"
+                        placeholder="职员用户组名称"
+                        prepend-icon="group"
+                        return-object
+                        clearable
+                        autofocus
+                >
+                    <template slot="no-data">
+                        <v-list-tile>
+                            <v-list-tile-title v-if="searchAvailableUserGroupsCriteria && !isLoadingUserGroups">暂无用户组</v-list-tile-title>
+                            <v-list-tile-title v-else-if="!isLoadingUserGroups">请输入<strong>"关键字"</strong>搜索用户组</v-list-tile-title>
+                        </v-list-tile>
+                    </template>
+                </v-autocomplete>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="gray darken-1" flat="flat" @click="addVisibilityUserGroupDialog = false">取消</v-btn>
+                    <v-btn color="blue darken-1" flat="flat" @click="addVisibilityUserGroup">添加</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+    </v-flex>
+</template>
+
+<script>
+    export default {
+        name: 'CustomerManagement',
+        data: () => ({
+            alert: {
+                visible: false,
+                color: "green",
+                timeout: 3000,
+                message: "Successful!"
+            },
+            editRemarksDialog: false,
+            drawer: null,
+            items: [
+                { icon: "person", text: "职员" },
+                { icon: "group", text: "职员用户组" },
+                { icon: "record_voice_over", text: "客户" },
+                { icon: "how_to_reg", text: "入件客户" }
+            ],
+            headers: [
+                { text: "客户姓名", value: "name", align:'center' },
+                { text: "联系电话", value: "phoneNumber", align:'center' },
+                { text: "性别", value: "fat", align:'center' },
+                { text: "生日", value: "carbs", align:'center' },
+                { text: "可见职员用户组", value: "protein", align:'center' },
+                { text: "备注", value: "iron", align:'center' },
+                { text: "操作", value: "iron", align:'center' }
+            ],
+            customers: [
+                {
+                    id: '1',
+                    name: "测试客户1",
+                    phoneNumber: 13631299978,
+                    sex: 'UNKNOWN',
+                    birth: '1996-02-26',
+                    visibilityUserGroups: [
+                        {
+                            id: 'userGroupId1',
+                            name: 'user group 1'
+                        },
+                        {
+                            id: 'userGroupId2',
+                            name: 'user group 2'
+                        }
+                    ],
+                    remarks: "first remarks"
+                },
+                {
+                    id: '2',
+                    name: "测试客户2",
+                    phoneNumber: 13631299978,
+                    sex: 'UNKNOWN',
+                    birth: '1996-02-26',
+                    visibilityUserGroups: [
+                        {
+                            id: 'userGroupId1',
+                            name: 'user group 1'
+                        },
+                        {
+                            id: 'userGroupId2',
+                            name: 'user group 2'
+                        }
+                    ],
+                    remarks: ""
+                }
+            ],
+            currentModifyItem: null,
+            modifyDialog: false,
+            modifyValid: true,
+            modifyBirthMenu: false,
+            validRules: {
+                nameRules: [
+                    v => !!v || '客户姓名不能为空',
+                    v => (v && v.length <= 10) || '客户姓名必须不超过不大于10位'
+                ],
+                phoneNumberRules: [
+                    v => !!v || '联系电话不能为空',
+                    v => /^1[3-578]\d{9}$/.test(v) || '联系电话不符合规则'
+                ]
+            },
+            sex: [
+                { value: 'UNKNOWN', name: '未知' },
+                { value: 'MALE', name: '男' },
+                { value: 'FEMALE', name: '女' },
+            ],
+            currentAddVisibilityUserGroupItem: null,
+            addVisibilityUserGroupDialog: false,
+            isLoadingUserGroups: false,
+            availableUserGroups: [],
+            searchAvailableUserGroupsCriteria: null,
+            selectedUserGroup: null,
+            selectedItem: []
+        }),
+        props: {
+            source: String
+        },
+        methods: {
+            handleSelected(selected) {
+                alert(selected)
+            },
+            saveRemarks() {
+                this.editRemarksDialog = false
+                this.alertMessage()
+            },
+            alertMessage(message = "Successful!", color = "green") {
+                this.alert.visible = true
+                this.alert.color = color
+                this.alert.message = message
+            },
+            removeVisibilityUserGroup(userGroup, item) {
+                item.visibilityUserGroups.splice(item.visibilityUserGroups.indexOf(item), 1)
+                this.alertMessage()
+            },
+            removeItem(item) {
+                this.customers.splice(this.customers.indexOf(item), 1)
+                this.alertMessage()
+            },
+            modifyItem(item) {
+                this.currentModifyItem = this.clone(item)
+                this.modifyDialog = true
+            },
+            saveItem() {
+                this.currentModifyItem = null
+                this.modifyDialog = false
+                this.alertMessage()
+            },
+            showAddVisibilityUserGroupDialog(item) {
+                this.currentAddVisibilityUserGroupItem = item
+                this.addVisibilityUserGroupDialog = true
+            },
+            addVisibilityUserGroup() {
+                if (! this.selectedUserGroup) {
+                    this.alertMessage('未选定用户组', 'error')
+                    return
+                }
+                if (! this.currentAddVisibilityUserGroupItem) {
+                    this.alertMessage('未选定修改项', 'error')
+                    return
+                }
+                for (let index in this.currentAddVisibilityUserGroupItem.visibilityUserGroups) {
+                    if (this.currentAddVisibilityUserGroupItem.visibilityUserGroups[index].id === this.selectedUserGroup.id) {
+                        this.alertMessage('当前可见用户组已存在', 'error')
+                        return
+                    }
+                }
+                this.currentAddVisibilityUserGroupItem.visibilityUserGroups.splice(this.currentAddVisibilityUserGroupItem.visibilityUserGroups.length, 0, this.selectedUserGroup)
+                this.addVisibilityUserGroupDialog = false
+                this.alertMessage()
+            }
+        },
+        watch: {
+            searchAvailableUserGroupsCriteria(val) {
+                if (!val) return
+                if (this.isLoadingUserGroups) return
+                this.isLoadingUserGroups = true
+                let that = this
+                setTimeout(()=>{
+                    that.availableUserGroups = [
+                        { name: 'user group 1', id: 'userGroupId1' },
+                        { name: 'user group 2', id: 'userGroupId2' },
+                        { name: 'user group 3', id: 'userGroupId3' }
+                    ]
+                    that.isLoadingUserGroups = false
+                }, 200)
+            },
+            addVisibilityUserGroupDialog(val) {
+                if (!val) {
+                    this.availableUserGroups = []
+                    this.searchAvailableUserGroupsCriteria = null
+                    this.currentAddVisibilityUserGroupItem = null
+                    this.selectedUserGroup = null
+                }
+            }
+        }
+    };
+</script>

@@ -1,15 +1,15 @@
 <template>
   <v-app id="inspire">
-    <v-snackbar :color="alert.color" v-model="alert.visible" :timeout="alert.timeout" top>
-      {{ alert.message }}
-      <v-btn flat @click="alert.visible = false">Close</v-btn>
+    <v-snackbar :color="that.$store.state.alert.color" v-model="that.$store.state.alert.visible" :timeout="that.$store.state.alert.timeout" top>
+      {{ that.$store.state.alert.message }}
+      <v-btn flat @click="that.$store.state.alert.visible = false">Close</v-btn>
     </v-snackbar>
     <v-navigation-drawer :clipped="$vuetify.breakpoint.lgAndUp" v-model="drawer" fixed app>
-      <v-list dense v-if="this.$user">
+      <v-list dense v-if="that.$store.state.user">
         <template v-for="item in items">
-          <v-list-tile :key="item.text" @click="handleSelected(item.text)">
+          <v-list-tile :key="item.text" @click="currentSelectedPage = item.page; drawer = false" :color="currentSelectedPage === item.page ? 'primary' : undefined">
             <v-list-tile-action>
-              <v-icon>{{ item.icon }}</v-icon>
+              <v-icon :color="currentSelectedPage === item.page ? 'primary' : undefined">{{ item.icon }}</v-icon>
             </v-list-tile-action>
             <v-list-tile-content>
               <v-list-tile-title>
@@ -29,7 +29,7 @@
         </v-layout>
       </v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn icon large v-if="this.$user">
+      <v-btn icon large v-if="that.$store.state.user">
         <v-tooltip bottom>
           <v-avatar size="34px" slot="activator">
             <img src="http://p0.ifengimg.com/a/2018_45/bcc07f5bc8bf9cf_size26_w640_h584.jpg" alt="Vuetify">
@@ -37,14 +37,14 @@
           <span>用户中心</span>
         </v-tooltip>
       </v-btn>
-      <v-subheader class="hidden-md-and-down" v-if="this.$user">{{ this.$user.username }}</v-subheader>
-      <v-tooltip bottom v-if="this.$user">
+      <v-subheader class="hidden-md-and-down" v-if="that.$store.state.user">{{ that.$store.state.user.username }}</v-subheader>
+      <v-tooltip bottom v-if="that.$store.state.user">
         <v-btn icon slot="activator" @click="logout">
           <v-icon>exit_to_app</v-icon>
         </v-btn>
         <span>登出</span>
       </v-tooltip>
-      <v-tooltip bottom v-if="!this.$user">
+      <v-tooltip bottom v-if="!that.$store.state.user">
         <v-btn icon slot="activator">
           <v-icon>person</v-icon>
         </v-btn>
@@ -53,8 +53,10 @@
     </v-toolbar>
     <v-content>
       <v-container fluid fill-height>
-        <v-layout justify-center v-if="this.$user">
-            <CustomerManagement></CustomerManagement>
+        <v-layout justify-center v-if="that.$store.state.user">
+          <EmployeeManagement v-if="currentSelectedPage === 'employee'"></EmployeeManagement>
+          <CustomerManagement v-if="currentSelectedPage === 'customer'"></CustomerManagement>
+          <UserGroup v-if="currentSelectedPage === 'user_group'"></UserGroup>
         </v-layout>
         <v-layout justify-center align-center v-else>
           <!--login-->
@@ -84,63 +86,58 @@
 
 <script>
 import CustomerManagement from "./components/CustomerManagement";
+import EmployeeManagement from "./components/EmployeeManagement";
+import UserGroup from "./components/UserGroup";
 export default {
     name: 'App',
-    components: {CustomerManagement},
-    data: ()=>({
-        alert: {
-            visible: false,
-            color: "green",
-            timeout: 3000,
-            message: "Successful!"
-        },
-        drawer: null,
-        items: [],
-        isLoginLoading: false,
-        loginUser: {}
-    }),
+    components: {UserGroup, EmployeeManagement, CustomerManagement },
+    data: function () {
+        return {
+            that: this,
+            drawer: null,
+            items: [],
+            isLoginLoading: false,
+            loginUser: {},
+            currentSelectedPage: ''
+        }
+    },
     methods: {
-        alertMessage(message = "Successful!", color = "green") {
-            this.alert.visible = true
-            this.alert.color = color
-            this.alert.message = message
-        },
         login() {
             if (this.loginUser.username && this.loginUser.password){
                 this.isLoginLoading = true
                 setTimeout(()=>{
                     this.$post('/user/login', this.loginUser, (data)=>{
-                        this.alertMessage(data.message)
-                        this.$user = {
+                        this.$store.state.user = {
                             id: data['content']['id'],
                             username: data['content']['username'],
                             type: data['content']['type']
                         }
-                        if (this.$user.type === 'EMPLOYEE') {
+                        if (this.$store.state.user.type === 'EMPLOYEE') {
                             this.items = [
-                                { icon: "record_voice_over", text: "客户" },
-                                { icon: "how_to_reg", text: "入件客户" }
+                                { icon: "record_voice_over", text: "客户", page: 'customer'},
+                                { icon: "how_to_reg", text: "入件客户", page: 'incoming_customer' }
                             ]
-                        } else if (this.$user.type === 'ADMINISTRATOR') {
+                        } else if (this.$store.state.user.type === 'ADMINISTRATOR') {
                             this.items = [
-                                { icon: "person", text: "职员" },
-                                { icon: "group", text: "职员用户组" },
-                                { icon: "record_voice_over", text: "客户" },
-                                { icon: "how_to_reg", text: "入件客户" }
+                                { icon: "person", text: "职员", page: 'employee' },
+                                { icon: "group", text: "职员用户组", page: 'user_group' },
+                                { icon: "record_voice_over", text: "客户", page: 'customer' },
+                                { icon: "how_to_reg", text: "入件客户", page: 'incoming_customer' }
                             ]
                         }
+                        this.currentSelectedPage = this.items[0].page
                         this.isLoginLoading = false
                         this.loginUser = {}
                     }, (errorMessage)=>{
-                        this.alertMessage(errorMessage, 'error')
+                        this.$alertMessage(errorMessage, 'error')
                         this.isLoginLoading = false
                     })
-                }, 1000)
+                }, 200)
             }
         },
         logout() {
-            this.$user = null
-            this.alertMessage('logout successful')
+            this.$store.state.user = null
+            this.$alertMessage('logout successful')
         }
     }
 };

@@ -1,9 +1,5 @@
 <template>
     <v-flex xs12>
-        <v-snackbar :color="alert.color" v-model="alert.visible" :timeout="alert.timeout" top>
-            {{ alert.message }}
-            <v-btn flat @click="alert.visible = false">Close</v-btn>
-        </v-snackbar>
         <v-toolbar flat color="blue-grey" dark>
             <v-toolbar-title class="text-no-wrap">客户管理</v-toolbar-title>
             <v-divider class="mx-3" inset vertical></v-divider>
@@ -12,7 +8,7 @@
                 <v-btn color="green lighten-1" small>批量添加可见职员用户组
                     <v-icon class="ml-1" small>rss_feed</v-icon>
                 </v-btn>
-                <v-btn color="white" small light>添加
+                <v-btn color="white" small light @click="addCustomerDialog = true">添加
                     <v-icon class="ml-1" small>add</v-icon>
                 </v-btn>
             </div>
@@ -20,7 +16,7 @@
                 <v-btn color="green lighten-1" icon>
                     <v-icon small>rss_feed</v-icon>
                 </v-btn>
-                <v-btn color="white" icon light>
+                <v-btn color="white" icon light @click="addCustomerDialog = true">
                     <v-icon small>add</v-icon>
                 </v-btn>
             </div>
@@ -41,9 +37,9 @@
                 <td class="text-xs-center">{{ props.item.name }}</td>
                 <td class="text-xs-center">{{ props.item.phoneNumber }}</td>
                 <td class="text-xs-center">{{ props.item.sex}}</td>
-                <td class="text-xs-center px-1">{{ props.item.birth }}</td>
+                <td class="text-xs-center px-1">{{ props.item.createDate }}</td>
                 <td class="text-xs-center">
-                    <div v-if="props.item.visibilityUserGroups.length === 0">无</div>
+                    <div v-if="props.item.visibilityUserGroups === undefined || props.item.visibilityUserGroups.length === 0">无</div>
                     <v-scale-transition group>
                         <div v-for="userGroup in props.item.visibilityUserGroups" :key="userGroup.id">
                             <v-chip small close color="green" text-color="white" @input="removeVisibilityUserGroup(userGroup, props.item)">{{ userGroup.name }}</v-chip>
@@ -57,7 +53,7 @@
                     <v-card width="320">
                         <v-card-title primary-title>
                             <div>
-                                <div v-if="props.item.remarks">{{ props.item.remarks }}</div>
+                                <div v-if="props.item.remarks && props.item.remarks !== 'null'">{{ props.item.remarks }}</div>
                                 <div v-else class="grey--text">无</div>
                             </div>
                         </v-card-title>
@@ -136,24 +132,24 @@
                                 color="primary"
                         ></v-radio>
                     </v-radio-group>
-                    <v-menu
-                            :close-on-content-click="false"
-                            v-model="modifyBirthMenu"
-                            :nudge-right="33"
-                            lazy
-                            transition="scale-transition"
-                            offset-y
-                            full-width
-                            min-width="290px"
-                    >
-                        <v-text-field
-                                prepend-icon="event"
-                                slot="activator"
-                                v-model="currentModifyItem.birth"
-                                label="生日"
-                                readonly
-                        ></v-text-field>
-                        <v-date-picker v-model="currentModifyItem.birth" @input="modifyBirthMenu = false"></v-date-picker></v-menu>
+                    <!--<v-menu-->
+                            <!--:close-on-content-click="false"-->
+                            <!--v-model="modifyBirthMenu"-->
+                            <!--:nudge-right="33"-->
+                            <!--lazy-->
+                            <!--transition="scale-transition"-->
+                            <!--offset-y-->
+                            <!--full-width-->
+                            <!--min-width="290px"-->
+                    <!--&gt;-->
+                        <!--<v-text-field-->
+                                <!--prepend-icon="event"-->
+                                <!--slot="activator"-->
+                                <!--v-model="currentModifyItem.birth"-->
+                                <!--label="生日"-->
+                                <!--readonly-->
+                        <!--&gt;</v-text-field>-->
+                        <!--<v-date-picker v-model="currentModifyItem.birth" @input="modifyBirthMenu = false"></v-date-picker></v-menu>-->
                 </v-form>
                 <v-card-actions>
                     <v-spacer></v-spacer>
@@ -205,133 +201,166 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <!--add customer dialog-->
+        <v-dialog v-model="addCustomerDialog" max-width="460">
+            <v-card>
+                <v-img class="white--text" height="180px" src="https://picsum.photos/500/300?image=10">
+                    <v-container fill-height fluid>
+                        <v-layout fill-height>
+                            <v-flex xs12 align-end flexbox>
+                                <span class="headline">添加客户</span>
+                            </v-flex>
+                        </v-layout>
+                    </v-container>
+                </v-img>
+                <v-form v-model="addCustomerValid" lazy-validation class="px-3 py-3" onsubmit="return false;">
+                    <v-text-field
+                        prepend-icon="person"
+                        v-model="newCustomer.name"
+                        :rules="validRules.nameRules"
+                        label="客户姓名"
+                        required
+                ></v-text-field>
+                    <v-text-field
+                            prepend-icon="call"
+                            v-model="newCustomer.phoneNumber"
+                            :rules="validRules.phoneNumberRules"
+                            label="联系电话"
+                            required
+                    ></v-text-field>
+                    <v-radio-group v-model="newCustomer.sex" label="性别" row prepend-icon="wc">
+                        <v-radio
+                                v-for="s in sex"
+                                :key="s.name"
+                                :label="s.name"
+                                :value="s.value"
+                                color="primary"
+                        ></v-radio>
+                    </v-radio-group>
+                </v-form>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="gray darken-1" flat="flat" @click="addCustomerDialog = false">取消</v-btn>
+                    <v-btn color="blue darken-1" flat="flat" @click="addCustomer">保存</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </v-flex>
 </template>
 
 <script>
     export default {
         name: 'CustomerManagement',
-        data: () => ({
-            alert: {
-                visible: false,
-                color: "green",
-                timeout: 3000,
-                message: "Successful!"
-            },
-            editRemarksDialog: false,
-            drawer: null,
-            items: [
-                { icon: "person", text: "职员" },
-                { icon: "group", text: "职员用户组" },
-                { icon: "record_voice_over", text: "客户" },
-                { icon: "how_to_reg", text: "入件客户" }
-            ],
-            headers: [
-                { text: "客户姓名", value: "name", align:'center' },
-                { text: "联系电话", value: "phoneNumber", align:'center' },
-                { text: "性别", value: "fat", align:'center' },
-                { text: "生日", value: "carbs", align:'center' },
-                { text: "可见职员用户组", value: "protein", align:'center' },
-                { text: "备注", value: "iron", align:'center' },
-                { text: "操作", value: "iron", align:'center' }
-            ],
-            customers: [
-                {
-                    id: '1',
-                    name: "测试客户1",
-                    phoneNumber: 13631299978,
-                    sex: 'UNKNOWN',
-                    birth: '1996-02-26',
-                    visibilityUserGroups: [
-                        {
-                            id: 'userGroupId1',
-                            name: 'user group 1'
-                        },
-                        {
-                            id: 'userGroupId2',
-                            name: 'user group 2'
-                        }
-                    ],
-                    remarks: "first remarks"
-                },
-                {
-                    id: '2',
-                    name: "测试客户2",
-                    phoneNumber: 13631299978,
-                    sex: 'UNKNOWN',
-                    birth: '1996-02-26',
-                    visibilityUserGroups: [
-                        {
-                            id: 'userGroupId1',
-                            name: 'user group 1'
-                        },
-                        {
-                            id: 'userGroupId2',
-                            name: 'user group 2'
-                        }
-                    ],
-                    remarks: ""
-                }
-            ],
-            currentModifyItem: null,
-            modifyDialog: false,
-            modifyValid: true,
-            modifyBirthMenu: false,
-            validRules: {
-                nameRules: [
-                    v => !!v || '客户姓名不能为空',
-                    v => (v && v.length <= 10) || '客户姓名必须不超过不大于10位'
+        data: function () {
+            return {
+                that: this,
+                editRemarksDialog: false,
+                headers: [
+                    { text: "客户姓名", value: "name", align:'center' },
+                    { text: "联系电话", value: "phoneNumber", align:'center' },
+                    { text: "性别", value: "sex", align:'center' },
+                    { text: "创建日期", value: "createDate", align:'center' },
+                    { text: "可见职员用户组", value: "visibilityUserGroups", align:'center' },
+                    { text: "备注", value: "remarks", align:'center' },
+                    { text: "操作", value: "action", align:'center' }
                 ],
-                phoneNumberRules: [
-                    v => !!v || '联系电话不能为空',
-                    v => /^1[3-578]\d{9}$/.test(v) || '联系电话不符合规则'
-                ]
-            },
-            sex: [
-                { value: 'UNKNOWN', name: '未知' },
-                { value: 'MALE', name: '男' },
-                { value: 'FEMALE', name: '女' },
-            ],
-            currentAddVisibilityUserGroupItem: null,
-            addVisibilityUserGroupDialog: false,
-            isLoadingUserGroups: false,
-            availableUserGroups: [],
-            searchAvailableUserGroupsCriteria: null,
-            selectedUserGroup: null,
-            selectedItem: []
-        }),
+                customers: [],
+                currentModifyItem: null,
+                modifyDialog: false,
+                modifyValid: true,
+                modifyBirthMenu: false,
+                validRules: {
+                    nameRules: [
+                        v => !!v || '客户姓名不能为空',
+                        v => (v && v.length <= 10) || '客户姓名必须不超过不大于10位'
+                    ],
+                    phoneNumberRules: [
+                        v => !!v || '联系电话不能为空'
+                    ]
+                },
+                sex: [
+                    { value: 'UNKNOWN', name: '未知' },
+                    { value: 'MALE', name: '男' },
+                    { value: 'FEMALE', name: '女' },
+                ],
+                currentAddVisibilityUserGroupItem: null,
+                addVisibilityUserGroupDialog: false,
+                isLoadingUserGroups: false,
+                availableUserGroups: [],
+                searchAvailableUserGroupsCriteria: null,
+                selectedUserGroup: null,
+                selectedItem: [],
+                addCustomerDialog: false,
+                addCustomerValid: true,
+                newCustomer: {
+                    name: '',
+                    phoneNumber: '',
+                    sex: 'UNKNOWN'
+                }
+            }
+        },
         props: {
             source: String
         },
+        mounted: function() {
+          this.refreshCustomer()
+        },
         methods: {
-            handleSelected(selected) {
-                alert(selected)
+            refreshCustomer() {
+                if (this.$store.state.user.type === 'ADMINISTRATOR') {
+                    this.$post('/customer/all', {}, (data) => {
+                        this.customers = data['content']
+                    })
+                } else {
+                    this.$post('/customer', {
+                        userId: this.$store.state.user.id
+                    }, (data) => {
+                        this.customers = data['content']
+                    })
+                }
+            },
+            addCustomer() {
+                if (this.addCustomerValid) {
+                    this.$post('/customer/save', this.newCustomer, () => {
+                        this.newCustomer = {
+                            name: '',
+                            phoneNumber: '',
+                            sex: 'UNKNOWN'
+                        }
+                        this.addCustomerValid = true
+                        this.addCustomerDialog = false
+                        this.refreshCustomer()
+                    })
+                }
             },
             saveRemarks() {
                 this.editRemarksDialog = false
-                this.alertMessage()
-            },
-            alertMessage(message = "Successful!", color = "green") {
-                this.alert.visible = true
-                this.alert.color = color
-                this.alert.message = message
+                this.$alertMessage()
             },
             removeVisibilityUserGroup(userGroup, item) {
-                item.visibilityUserGroups.splice(item.visibilityUserGroups.indexOf(item), 1)
-                this.alertMessage()
+                this.$post('/customer/remove_visibility', {
+                    customerId: item.id,
+                    userGroupId: userGroup.id
+                }, () => {
+                    this.refreshCustomer()
+                })
             },
             removeItem(item) {
-                this.customers.splice(this.customers.indexOf(item), 1)
-                this.alertMessage()
+                this.$post('/customer/delete', { customerId: item.id }, () => {
+                    this.refreshCustomer()
+                })
             },
             modifyItem(item) {
                 this.currentModifyItem = this.clone(item)
                 this.modifyDialog = true
             },
             saveItem() {
-                this.currentModifyItem = null
-                this.modifyDialog = false
-                this.alertMessage()
+                this.$post('/customer/save', this.currentModifyItem, () => {
+                    this.currentModifyItem = null
+                    this.modifyDialog = false
+                    this.refreshCustomer()
+                })
             },
             showAddVisibilityUserGroupDialog(item) {
                 this.currentAddVisibilityUserGroupItem = item
@@ -339,22 +368,27 @@
             },
             addVisibilityUserGroup() {
                 if (! this.selectedUserGroup) {
-                    this.alertMessage('未选定用户组', 'error')
+                    this.$alertMessage('未选定用户组', 'error')
                     return
                 }
                 if (! this.currentAddVisibilityUserGroupItem) {
-                    this.alertMessage('未选定修改项', 'error')
+                    this.$alertMessage('未选定修改项', 'error')
                     return
                 }
                 for (let index in this.currentAddVisibilityUserGroupItem.visibilityUserGroups) {
                     if (this.currentAddVisibilityUserGroupItem.visibilityUserGroups[index].id === this.selectedUserGroup.id) {
-                        this.alertMessage('当前可见用户组已存在', 'error')
+                        this.$alertMessage('当前可见用户组已存在', 'error')
                         return
                     }
                 }
-                this.currentAddVisibilityUserGroupItem.visibilityUserGroups.splice(this.currentAddVisibilityUserGroupItem.visibilityUserGroups.length, 0, this.selectedUserGroup)
-                this.addVisibilityUserGroupDialog = false
-                this.alertMessage()
+                this.$post('/customer/visibility', {
+                    customerId: this.currentAddVisibilityUserGroupItem.id,
+                    userGroupId: this.selectedUserGroup.id
+                }, () => {
+                    this.currentModifyItem = null
+                    this.addVisibilityUserGroupDialog = false
+                    this.refreshCustomer()
+                })
             }
         },
         watch: {
@@ -362,15 +396,10 @@
                 if (!val) return
                 if (this.isLoadingUserGroups) return
                 this.isLoadingUserGroups = true
-                let that = this
-                setTimeout(()=>{
-                    that.availableUserGroups = [
-                        { name: 'user group 1', id: 'userGroupId1' },
-                        { name: 'user group 2', id: 'userGroupId2' },
-                        { name: 'user group 3', id: 'userGroupId3' }
-                    ]
-                    that.isLoadingUserGroups = false
-                }, 200)
+                this.$post('/user_group', {}, (data) => {
+                    this.availableUserGroups = data['content']
+                    this.isLoadingUserGroups = false
+                })
             },
             addVisibilityUserGroupDialog(val) {
                 if (!val) {

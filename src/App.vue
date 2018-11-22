@@ -7,7 +7,7 @@
     <v-navigation-drawer :clipped="$vuetify.breakpoint.lgAndUp" v-model="drawer" fixed app>
       <v-list dense v-if="that.$store.state.user">
         <template v-for="item in items">
-          <v-list-tile :key="item.text" @click="currentSelectedPage = item.page; drawer = false" :color="currentSelectedPage === item.page ? 'primary' : undefined">
+          <v-list-tile :key="item.text" @click="changeSelectPage(item)" :color="currentSelectedPage === item.page ? 'primary' : undefined">
             <v-list-tile-action>
               <v-icon :color="currentSelectedPage === item.page ? 'primary' : undefined">{{ item.icon }}</v-icon>
             </v-list-tile-action>
@@ -29,12 +29,12 @@
         </v-layout>
       </v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn icon large v-if="that.$store.state.user">
+      <v-btn icon large v-if="that.$store.state.user" @click="changePasswordDialog = true">
         <v-tooltip bottom>
           <v-avatar size="34px" slot="activator">
             <img src="http://p0.ifengimg.com/a/2018_45/bcc07f5bc8bf9cf_size26_w640_h584.jpg" alt="Vuetify">
           </v-avatar>
-          <span>用户中心</span>
+          <span>修改密码</span>
         </v-tooltip>
       </v-btn>
       <v-subheader class="hidden-md-and-down" v-if="that.$store.state.user">{{ that.$store.state.user.username }}</v-subheader>
@@ -53,10 +53,50 @@
     </v-toolbar>
     <v-content>
       <v-container fluid fill-height>
+        <!--change password dialog-->
+        <v-dialog v-model="changePasswordDialog" max-width="460">
+          <v-card>
+            <v-img class="white--text" height="180px" src="https://picsum.photos/500/300?image=10">
+              <v-container fill-height fluid>
+                <v-layout fill-height>
+                  <v-flex xs12 align-end flexbox>
+                    <span class="headline">修改密码</span>
+                  </v-flex>
+                </v-layout>
+              </v-container>
+            </v-img>
+            <v-form v-model="changePasswordValid" lazy-validation class="px-3 py-3" onsubmit="return false;">
+              <v-text-field
+                      autofocus
+                      prepend-icon="lock"
+                      v-model="newPassword.password"
+                      :rules="validRules.passwordRules"
+                      type="password"
+                      label="新密码"
+                      required
+              ></v-text-field>
+              <v-text-field
+                      prepend-icon="lock"
+                      v-model="newPassword.confirmPassword"
+                      :rules="confirmPasswordRules"
+                      label="确认新密码"
+                      type="password"
+                      required
+                      @keyup.enter="changePassword"
+              ></v-text-field>
+            </v-form>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn color="gray darken-1" flat="flat" @click="changePasswordDialog = false">取消</v-btn>
+              <v-btn color="blue darken-1" flat="flat" @click="changePassword">修改</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
         <v-layout justify-center v-if="that.$store.state.user">
           <EmployeeManagement v-if="currentSelectedPage === 'employee'"></EmployeeManagement>
           <CustomerManagement v-if="currentSelectedPage === 'customer'"></CustomerManagement>
           <UserGroup v-if="currentSelectedPage === 'user_group'"></UserGroup>
+          <IncomingCustomerManagement v-if="currentSelectedPage === 'incoming_customer'"></IncomingCustomerManagement>
         </v-layout>
         <v-layout justify-center align-center v-else>
           <!--login-->
@@ -88,20 +128,54 @@
 import CustomerManagement from "./components/CustomerManagement";
 import EmployeeManagement from "./components/EmployeeManagement";
 import UserGroup from "./components/UserGroup";
+import IncomingCustomerManagement from "./components/IncomingCustomer";
 export default {
     name: 'App',
-    components: {UserGroup, EmployeeManagement, CustomerManagement },
+    components: {IncomingCustomerManagement, UserGroup, EmployeeManagement, CustomerManagement },
     data: function () {
         return {
             that: this,
+            isMobile: false,
             drawer: null,
             items: [],
             isLoginLoading: false,
             loginUser: {},
-            currentSelectedPage: ''
+            currentSelectedPage: '',
+            changePasswordDialog: false,
+            newPassword: {
+                password: '',
+                confirmPassword: ''
+            },
+            changePasswordValid: false,
+            validRules: {
+                passwordRules: [
+                    v => !!v || '密码不能为空',
+                    v => (v && v.length <= 20) || '密码必须不超过不大于20位',
+                    v => (v && v.length >= 6) || '密码必须不少于6位'
+                ]
+            }
+        }
+    },
+    computed: {
+        confirmPasswordRules() {
+            return [
+                v => !!v || '确认密码不能为空',
+                v => (v === this.newPassword.password) || '密码输入不一致'
+            ]
         }
     },
     methods: {
+        onResize () {
+            if (this.$vuetify.breakpoint.lgAndUp !== true) {
+                this.isMobile = true
+            } else {
+                this.isMobile = false
+            }
+        },
+        changeSelectPage(item) {
+            this.currentSelectedPage = item.page
+            this.drawer = !this.isMobile
+        },
         login() {
             if (this.loginUser.username && this.loginUser.password){
                 this.isLoginLoading = true
@@ -138,6 +212,30 @@ export default {
         logout() {
             this.$store.state.user = null
             this.$alertMessage('logout successful')
+        },
+        changePassword() {
+            if (this.changePasswordValid) {
+              this.$post('/user/change_password', {
+                  userId: this.$store.state.user.id,
+                  password: this.newPassword.password
+              }, ()=>{
+                  this.newPassword = {
+                      password: '',
+                      confirmPassword: ''
+                  }
+                  this.changePasswordDialog = false
+                  this.logout()
+              })
+            }
+        }
+    },
+    mounted () {
+        this.onResize()
+        window.addEventListener('resize', this.onResize, { passive: true })
+    },
+    beforeDestroy () {
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('resize', this.onResize, { passive: true })
         }
     }
 };

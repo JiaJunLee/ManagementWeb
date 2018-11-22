@@ -10,33 +10,41 @@
                 </v-btn>
             </div>
             <div class="hidden-md-and-up">
-                <v-btn color="green lighten-1" icon>
-                    <v-icon small>rss_feed</v-icon>
-                </v-btn>
                 <v-btn color="white" icon light @click="createUserGroupDialog = true">
                     <v-icon small>add</v-icon>
                 </v-btn>
             </div>
         </v-toolbar>
         <!--data table-->
-        <v-data-table :headers="headers" :items="userGroups" class="elevation-1" loading>
-            <template slot="no-data">
-                <v-alert :value="true" color="grey lighten-1" icon="warning">无数据</v-alert>
-            </template>
-            <template slot="items" slot-scope="props">
-                <td class="text-xs-center">{{ props.item.id }}</td>
-                <td class="text-xs-center">{{ props.item.name }}</td>
-                <td class="text-xs-center">{{ props.item.description }}</td>
-                <td class="text-xs-center px-2 py-2">
-                    <v-btn color="primary" small @click="that.$alertMessage('暂不可用')">修改
-                        <v-icon small class="ml-1">edit</v-icon>
-                    </v-btn>
-                    <v-btn color="error" small @click="deleteUserGroup(props.item.id)">删除
-                        <v-icon small class="ml-1">remove</v-icon>
-                    </v-btn>
-                </td>
-            </template>
-        </v-data-table>
+        <v-card>
+            <v-card-title>
+                <v-text-field
+                        v-model="search"
+                        append-icon="search"
+                        label="搜索关键字"
+                        hide-details
+                        clearable
+                ></v-text-field>
+            </v-card-title>
+            <v-data-table :headers="headers" :items="userGroups" class="elevation-1" loading :search="search" :rows-per-page-items="dataTablePageConfig">
+                <template slot="no-data">
+                    <v-alert :value="true" color="grey lighten-1" icon="warning">无数据</v-alert>
+                </template>
+                <template slot="items" slot-scope="props">
+                    <td class="text-xs-center">{{ props.item.id }}</td>
+                    <td class="text-xs-center">{{ props.item.name }}</td>
+                    <td class="text-xs-center">{{ props.item.description }}</td>
+                    <td class="text-xs-center px-2 py-2">
+                        <v-btn color="primary" small @click="that.$alertMessage('暂不可用')">修改
+                            <v-icon small class="ml-1">edit</v-icon>
+                        </v-btn>
+                        <v-btn color="error" small @click="deleteUserGroup(props.item.id)">删除
+                            <v-icon small class="ml-1">remove</v-icon>
+                        </v-btn>
+                    </td>
+                </template>
+            </v-data-table>
+        </v-card>
         <!--add user group dialog-->
         <v-dialog v-model="createUserGroupDialog" max-width="460">
             <v-card>
@@ -83,6 +91,10 @@
         data: function () {
             return {
                 that: this,
+                search: '',
+                dataTablePageConfig: [
+                    10, 25, { "text": "$vuetify.dataIterator.rowsPerPageAll", "value": -1 }
+                ],
                 headers: [
                     { text: "ID", value: "id", align:'center' },
                     { text: "用户组名称", value: "name", align:'center' },
@@ -95,7 +107,7 @@
                     name: '',
                     description: ''
                 },
-                createUserGroupValid: true,
+                createUserGroupValid: false,
                 validRules: {
                     nameRules: [
                         v => !!v || '用户组名称不能为空'

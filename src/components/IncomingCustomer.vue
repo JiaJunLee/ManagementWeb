@@ -1,14 +1,14 @@
 <template>
     <v-flex xs12>
         <v-toolbar flat color="blue-grey" dark>
-            <v-toolbar-title class="text-no-wrap">客户管理</v-toolbar-title>
+            <v-toolbar-title class="text-no-wrap">入件客户管理</v-toolbar-title>
             <v-divider class="mx-3" inset vertical></v-divider>
             <v-spacer></v-spacer>
             <div class="hidden-sm-and-down" v-if="that.$store.state.user.type === 'ADMINISTRATOR'">
                 <v-btn color="green lighten-1" small @click="addVisibilityUserGroupForSelectedDialog = true">批量添加可见职员用户组
                     <v-icon class="ml-1" small>rss_feed</v-icon>
                 </v-btn>
-                <v-btn color="white" small light @click="addCustomerDialog = true">添加
+                <v-btn color="white" small light @click="addIncomingCustomerDialog = true">添加
                     <v-icon class="ml-1" small>add</v-icon>
                 </v-btn>
             </div>
@@ -16,7 +16,7 @@
                 <v-btn color="green lighten-1" icon @click="addVisibilityUserGroupForSelectedDialog = true">
                     <v-icon small>rss_feed</v-icon>
                 </v-btn>
-                <v-btn color="white" icon light @click="addCustomerDialog = true">
+                <v-btn color="white" icon light @click="addIncomingCustomerDialog = true">
                     <v-icon small>add</v-icon>
                 </v-btn>
             </div>
@@ -28,11 +28,11 @@
                         v-model="search"
                         append-icon="search"
                         label="搜索关键字"
-                        clearable
                         hide-details
+                        clearable
                 ></v-text-field>
             </v-card-title>
-            <v-data-table :headers="headers" :items="customers" class="elevation-1" loading select-all v-model="selectedItem" item-key="id" :search="search" :rows-per-page-items="dataTablePageConfig">
+            <v-data-table :headers="headers" :items="incomingCustomers" class="elevation-1" loading select-all v-model="selectedItem" item-key="id" :search="search" :rows-per-page-items="dataTablePageConfig">
                 <template slot="no-data">
                     <v-alert :value="true" color="grey lighten-1" icon="warning">无数据</v-alert>
                 </template>
@@ -51,6 +51,8 @@
                         <v-icon color="primary" v-if="props.item.sex === 'MALE'">person</v-icon>
                         <v-icon color="pink" v-if="props.item.sex === 'FEMALE'">person</v-icon>
                     </td>
+                    <td class="text-xs-center px-1">{{ props.item.income }}</td>
+                    <td class="text-xs-center px-1">{{ props.item.cost }}</td>
                     <td class="text-xs-center px-1">{{ props.item.createDate }}</td>
                     <td class="text-xs-center px-1">{{ props.item.lastModifiedDate }}</td>
                     <td class="text-xs-center" v-if="that.$store.state.user.type === 'ADMINISTRATOR'">
@@ -64,22 +66,6 @@
                             <v-icon small>add</v-icon>
                         </v-btn>
                     </td>
-                    <td class="text-xs-left px-3 py-3" width="320">
-                        <v-card width="320">
-                            <v-card-title primary-title>
-                                <div>
-                                    <div v-if="props.item.remarks && props.item.remarks !== 'null'">{{ props.item.remarks }}</div>
-                                    <div v-else class="grey--text">无</div>
-                                </div>
-                            </v-card-title>
-                            <v-card-actions>
-                                <v-spacer></v-spacer>
-                                <v-btn small color="primary" @click="editRemarks(props.item)" icon>
-                                    <v-icon small>create</v-icon>
-                                </v-btn>
-                            </v-card-actions>
-                        </v-card>
-                    </td>
                     <td class="text-xs-center px-2 py-2" v-if="that.$store.state.user.type === 'ADMINISTRATOR'">
                         <v-btn color="primary" small @click="modifyItem(props.item)">修改
                             <v-icon small class="ml-1">edit</v-icon>
@@ -91,26 +77,6 @@
                 </template>
             </v-data-table>
         </v-card>
-        <!--edit dialog-->
-        <v-dialog v-model="editRemarksDialog" max-width="460">
-            <v-card>
-                <v-img class="white--text" height="180px" src="https://picsum.photos/500/300?image=38">
-                    <v-container fill-height fluid>
-                        <v-layout fill-height>
-                            <v-flex xs12 align-end flexbox>
-                                <span class="headline">修改备注</span>
-                            </v-flex>
-                        </v-layout>
-                    </v-container>
-                </v-img>
-                <v-textarea v-model="currentModifyItem.remarks" class="px-3 pt-3" v-if="currentModifyItem"></v-textarea>
-                <v-card-actions>
-                    <v-spacer></v-spacer>
-                    <v-btn color="gray darken-1" flat="flat" @click="editRemarksDialog = false">取消</v-btn>
-                    <v-btn color="blue darken-1" flat="flat" @click="saveItem">保存</v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
 
         <!--modify dialog-->
         <v-dialog v-model="modifyDialog" max-width="460" v-if="currentModifyItem">
@@ -148,24 +114,36 @@
                                 color="primary"
                         ></v-radio>
                     </v-radio-group>
+                    <v-text-field
+                            prepend-icon="credit_card"
+                            v-model="currentModifyItem.income"
+                            label="收佣"
+                            required
+                    ></v-text-field>
+                    <v-text-field
+                            prepend-icon="euro_symbol"
+                            v-model="currentModifyItem.cost"
+                            label="成本"
+                            required
+                    ></v-text-field>
                     <!--<v-menu-->
-                            <!--:close-on-content-click="false"-->
-                            <!--v-model="modifyBirthMenu"-->
-                            <!--:nudge-right="33"-->
-                            <!--lazy-->
-                            <!--transition="scale-transition"-->
-                            <!--offset-y-->
-                            <!--full-width-->
-                            <!--min-width="290px"-->
+                    <!--:close-on-content-click="false"-->
+                    <!--v-model="modifyBirthMenu"-->
+                    <!--:nudge-right="33"-->
+                    <!--lazy-->
+                    <!--transition="scale-transition"-->
+                    <!--offset-y-->
+                    <!--full-width-->
+                    <!--min-width="290px"-->
                     <!--&gt;-->
-                        <!--<v-text-field-->
-                                <!--prepend-icon="event"-->
-                                <!--slot="activator"-->
-                                <!--v-model="currentModifyItem.birth"-->
-                                <!--label="生日"-->
-                                <!--readonly-->
-                        <!--&gt;</v-text-field>-->
-                        <!--<v-date-picker v-model="currentModifyItem.birth" @input="modifyBirthMenu = false"></v-date-picker></v-menu>-->
+                    <!--<v-text-field-->
+                    <!--prepend-icon="event"-->
+                    <!--slot="activator"-->
+                    <!--v-model="currentModifyItem.birth"-->
+                    <!--label="生日"-->
+                    <!--readonly-->
+                    <!--&gt;</v-text-field>-->
+                    <!--<v-date-picker v-model="currentModifyItem.birth" @input="modifyBirthMenu = false"></v-date-picker></v-menu>-->
                 </v-form>
                 <v-card-actions>
                     <v-spacer></v-spacer>
@@ -262,25 +240,25 @@
         </v-dialog>
 
         <!--add customer dialog-->
-        <v-dialog v-model="addCustomerDialog" max-width="460">
+        <v-dialog v-model="addIncomingCustomerDialog" max-width="460">
             <v-card>
                 <v-img class="white--text" height="180px" src="https://picsum.photos/500/300?image=10">
                     <v-container fill-height fluid>
                         <v-layout fill-height>
                             <v-flex xs12 align-end flexbox>
-                                <span class="headline">添加客户</span>
+                                <span class="headline">添加入件客户</span>
                             </v-flex>
                         </v-layout>
                     </v-container>
                 </v-img>
-                <v-form v-model="addCustomerValid" lazy-validation class="px-3 py-3" onsubmit="return false;">
+                <v-form v-model="addIncomingCustomerValid" lazy-validation class="px-3 py-3" onsubmit="return false;">
                     <v-text-field
-                        prepend-icon="person"
-                        v-model="newCustomer.name"
-                        :rules="validRules.nameRules"
-                        label="客户姓名"
-                        required
-                ></v-text-field>
+                            prepend-icon="person"
+                            v-model="newCustomer.name"
+                            :rules="validRules.nameRules"
+                            label="客户姓名"
+                            required
+                    ></v-text-field>
                     <v-text-field
                             prepend-icon="call"
                             v-model="newCustomer.phoneNumber"
@@ -297,11 +275,23 @@
                                 color="primary"
                         ></v-radio>
                     </v-radio-group>
+                    <v-text-field
+                            prepend-icon="credit_card"
+                            v-model="newCustomer.income"
+                            label="收佣"
+                            required
+                    ></v-text-field>
+                    <v-text-field
+                            prepend-icon="euro_symbol"
+                            v-model="newCustomer.cost"
+                            label="成本"
+                            required
+                    ></v-text-field>
                 </v-form>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn color="gray darken-1" flat="flat" @click="addCustomerDialog = false">取消</v-btn>
-                    <v-btn color="blue darken-1" flat="flat" @click="addCustomer">保存</v-btn>
+                    <v-btn color="gray darken-1" flat="flat" @click="addIncomingCustomerDialog = false">取消</v-btn>
+                    <v-btn color="blue darken-1" flat="flat" @click="addIncomingCustomer">保存</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -310,17 +300,16 @@
 
 <script>
     export default {
-        name: 'CustomerManagement',
+        name: 'IncomingCustomerManagement',
         data: function () {
             return {
                 that: this,
+                headers: [],
                 search: '',
                 dataTablePageConfig: [
                     10, 25, { "text": "$vuetify.dataIterator.rowsPerPageAll", "value": -1 }
                 ],
-                editRemarksDialog: false,
-                headers: [],
-                customers: [],
+                incomingCustomers: [],
                 currentModifyItem: null,
                 modifyDialog: false,
                 modifyValid: false,
@@ -350,12 +339,14 @@
                 searchAvailableUserGroupsCriteriaForSelected: null,
                 selectedUserGroupForSelected: null,
                 selectedItem: [],
-                addCustomerDialog: false,
-                addCustomerValid: false,
+                addIncomingCustomerDialog: false,
+                addIncomingCustomerValid: false,
                 newCustomer: {
                     name: '',
                     phoneNumber: '',
-                    sex: 'UNKNOWN'
+                    sex: 'UNKNOWN',
+                    income: '',
+                    cost: ''
                 },
                 addVisibilityUserGroupForSelectedDialog: false
             }
@@ -364,16 +355,17 @@
             source: String
         },
         mounted: function() {
-          this.refreshCustomer()
+            this.refreshIncomingCustomer()
             if (this.$store.state.user.type === 'ADMINISTRATOR') {
                 this.headers = [
                     { text: "客户姓名", value: "name", align:'center' },
                     { text: "联系电话", value: "phoneNumber", align:'center' },
                     { text: "性别", value: "sex", align:'center' },
+                    { text: "收佣", value: "income", align:'center' },
+                    { text: "成本", value: "cost", align:'center' },
                     { text: "创建日期", value: "createDate", align:'center' },
                     { text: "最后修改日期", value: "lastModifiedDate", align:'center' },
                     { text: "可见职员用户组", value: "visibilityUserGroups", align:'center' },
-                    { text: "备注", value: "remarks", align:'center' },
                     { text: "操作", value: "action", align:'center' }
                 ]
             } else if (this.$store.state.user.type === 'EMPLOYEE') {
@@ -381,67 +373,65 @@
                     { text: "客户姓名", value: "name", align:'center' },
                     { text: "联系电话", value: "phoneNumber", align:'center' },
                     { text: "性别", value: "sex", align:'center' },
+                    { text: "收佣", value: "income", align:'center' },
+                    { text: "成本", value: "cost", align:'center' },
                     { text: "创建日期", value: "createDate", align:'center' },
-                    { text: "最后修改日期", value: "lastModifiedDate", align:'center' },
-                    { text: "备注", value: "remarks", align:'center' }
+                    { text: "最后修改日期", value: "lastModifiedDate", align:'center' }
                 ]
             }
         },
         methods: {
-            refreshCustomer() {
+            refreshIncomingCustomer() {
                 if (this.$store.state.user.type === 'ADMINISTRATOR') {
-                    this.$post('/customer/all', {}, (data) => {
-                        this.customers = data['content']
+                    this.$post('/incoming_customer/all', {}, (data) => {
+                        this.incomingCustomers = data['content']
                     })
                 } else {
-                    this.$post('/customer', {
+                    this.$post('/incoming_customer', {
                         userId: this.$store.state.user.id
                     }, (data) => {
-                        this.customers = data['content']
+                        this.incomingCustomers = data['content']
                     })
                 }
             },
-            addCustomer() {
-                if (this.addCustomerValid) {
-                    this.$post('/customer/save', this.newCustomer, () => {
+            addIncomingCustomer() {
+                if (this.addIncomingCustomerValid) {
+                    this.$post('/incoming_customer/save', this.newCustomer, () => {
                         this.newCustomer = {
                             name: '',
                             phoneNumber: '',
-                            sex: 'UNKNOWN'
+                            sex: 'UNKNOWN',
+                            income: '',
+                            cost: ''
                         }
-                        this.addCustomerValid = true
-                        this.addCustomerDialog = false
-                        this.refreshCustomer()
+                        this.addIncomingCustomerValid = true
+                        this.addIncomingCustomerDialog = false
+                        this.refreshIncomingCustomer()
                     })
                 }
             },
             removeVisibilityUserGroup(userGroup, item) {
-                this.$post('/customer/remove_visibility', {
-                    customerId: item.id,
+                this.$post('/incoming_customer/remove_visibility', {
+                    incomingCustomerId: item.id,
                     userGroupId: userGroup.id
                 }, () => {
-                    this.refreshCustomer()
+                    this.refreshIncomingCustomer()
                 })
             },
             removeItem(item) {
-                this.$post('/customer/delete', { customerId: item.id }, () => {
-                    this.refreshCustomer()
+                this.$post('/incoming_customer/delete', { incomingCustomerId: item.id }, () => {
+                    this.refreshIncomingCustomer()
                 })
             },
             modifyItem(item) {
                 this.currentModifyItem = this.clone(item)
                 this.modifyDialog = true
             },
-            editRemarks(item) {
-              this.currentModifyItem = this.clone(item)
-              this.editRemarksDialog = true
-            },
             saveItem() {
-                this.$post('/customer/save', this.currentModifyItem, () => {
+                this.$post('/incoming_customer/save', this.currentModifyItem, () => {
                     this.currentModifyItem = null
                     this.modifyDialog = false
-                    this.editRemarksDialog = false
-                    this.refreshCustomer()
+                    this.refreshIncomingCustomer()
                 })
             },
             showAddVisibilityUserGroupDialog(item) {
@@ -463,13 +453,13 @@
                         return
                     }
                 }
-                this.$post('/customer/visibility', {
-                    customerId: this.currentAddVisibilityUserGroupItem.id,
+                this.$post('/incoming_customer/visibility', {
+                    incomingCustomerId: this.currentAddVisibilityUserGroupItem.id,
                     userGroupId: this.selectedUserGroup.id
                 }, () => {
                     this.currentModifyItem = null
                     this.addVisibilityUserGroupDialog = false
-                    this.refreshCustomer()
+                    this.refreshIncomingCustomer()
                 })
             },
             addVisibilityUserGroupForSelected() {
@@ -488,13 +478,13 @@
                         customerIds.splice(customerIds.length, 0, this.selectedItem[index].id)
                     }
                 }
-                this.$post('/customer/visibilities', {
-                    customerIds: customerIds,
+                this.$post('/incoming_customer/visibilities', {
+                    incomingCustomerIds: customerIds,
                     userGroupId: this.selectedUserGroupForSelected.id
                 }, ()=>{
                     this.selectedItem = []
                     this.addVisibilityUserGroupForSelectedDialog = false
-                    this.refreshCustomer()
+                    this.refreshIncomingCustomer()
                 })
             }
         },

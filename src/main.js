@@ -4,8 +4,10 @@ import App from './App.vue'
 import axios from 'axios'
 import VueAxios from 'vue-axios'
 import Vuex from 'vuex'
+import Qs from 'qs'
+import 'material-design-icons-iconfont/dist/material-design-icons.css'
 
-axios.defaults.baseURL = 'http://192.168.124.12:8080'
+axios.defaults.baseURL = 'http://localhost:8080'
 axios.defaults.withCredentials = true
 
 Vue.use(VueAxios, axios)
@@ -22,7 +24,7 @@ Vue.prototype.clone = function (object) {
 }
 
 Vue.prototype.$post = function (path, data, callback, error, exception) {
-    Vue.axios.post(path, new URLSearchParams(data)).then((response)=>{
+    Vue.axios.post(path, Qs.stringify(data)).then((response)=>{
         if (response.data.resultCode !== 200) {
             this.$alertMessage(response.data.message, 'error')
             if (error) {

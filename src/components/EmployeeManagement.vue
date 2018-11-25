@@ -21,6 +21,7 @@
                 </v-btn>
             </div>
         </v-toolbar>
+
         <!--data table-->
         <v-card>
             <v-card-title>
@@ -68,7 +69,7 @@
                 <td class="text-xs-center" v-if="props.item.userInformation.birth">{{ props.item.userInformation.birth }}</td>
                 <td class="text-xs-center" v-else>无</td>
                 <td class="text-xs-center">{{ props.item.createDate }}</td>
-                <td class="text-xs-center" v-if="props.item.lastModifiedDate">{{ props.item.lastModifiedDate }}</td>
+                <td class="text-xs-center" v-if="props.item.userInformation.lastModifiedDate">{{ props.item.userInformation.lastModifiedDate }}</td>
                 <td class="text-xs-center" v-else>无</td>
                 <td class="text-xs-left px-3 py-3" width="320">
                     <v-card width="320">
@@ -78,20 +79,17 @@
                                 <div v-else class="grey--text">无</div>
                             </div>
                         </v-card-title>
-                        <v-card-actions>
-                            <v-spacer></v-spacer>
-                            <v-btn small color="primary" @click="that.$alertMessage('暂不可用')" icon>
-                                <v-icon small>create</v-icon>
-                            </v-btn>
-                        </v-card-actions>
                     </v-card>
                 </td>
                 <td class="text-xs-center px-2 py-2">
-                    <v-btn color="primary" small @click="that.$alertMessage('暂不可用')">修改
+                    <v-btn color="primary" small @click="modifyItem(props.item)">修改
                         <v-icon small class="ml-1">edit</v-icon>
                     </v-btn>
                     <v-btn color="error" small @click="deleteEmployee(props.item.id)">删除
                         <v-icon small class="ml-1">remove</v-icon>
+                    </v-btn>
+                    <v-btn color="blue-grey" small dark @click="showResetPasswordConfirmDialog(props.item)">重置密码
+                        <v-icon small class="ml-1">cached</v-icon>
                     </v-btn>
                 </td>
             </template>
@@ -214,6 +212,86 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <!--reset password confirm dialog-->
+        <v-dialog v-model="resetPasswordConfirmDialog" max-width="320" v-if="currentResetPasswordUser">
+            <v-card>
+                <v-card-title class="headline">请再次确认</v-card-title>
+                <v-card-text>
+                    是否确认重置 {{ currentResetPasswordUser.username }}, {{ currentResetPasswordUser.userInformation.name}} 的密码?
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="grey" flat="flat" @click="resetPasswordConfirmDialog = false">取消</v-btn>
+                    <v-btn color="primary" flat="flat" @click="resetPassword">确定</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!--modify employee information-->
+        <v-dialog v-model="modifyDialog" max-width="460" v-if="currentModifyItem">
+            <v-card>
+                <v-img class="white--text" height="180px" src="https://picsum.photos/500/300?image=10">
+                    <v-container fill-height fluid>
+                        <v-layout fill-height>
+                            <v-flex xs12 align-end flexbox>
+                                <span class="headline">修改信息</span>
+                            </v-flex>
+                        </v-layout>
+                    </v-container>
+                </v-img>
+                <v-form ref="form" v-model="modifyValid" lazy-validation class="px-3 py-3">
+                    <v-text-field
+                            prepend-icon="person"
+                            v-model="currentModifyItem.name"
+                            label="职员姓名"
+                    ></v-text-field>
+                    <v-text-field
+                            prepend-icon="call"
+                            v-model="currentModifyItem.phoneNumber"
+                            label="联系电话"
+                    ></v-text-field>
+                    <v-radio-group v-model="currentModifyItem.sex" label="性别" row prepend-icon="wc">
+                        <v-radio
+                                v-for="s in sex"
+                                :key="s.name"
+                                :label="s.name"
+                                :value="s.value"
+                                color="primary"
+                        ></v-radio>
+                    </v-radio-group>
+                    <v-menu
+                    :close-on-content-click="false"
+                    v-model="modifyBirthMenu"
+                    :nudge-right="33"
+                    lazy
+                    transition="scale-transition"
+                    offset-y
+                    full-width
+                    min-width="290px"
+                    >
+                    <v-text-field
+                    prepend-icon="event"
+                    slot="activator"
+                    v-model="currentModifyItem.birth"
+                    label="生日"
+                    readonly
+                    ></v-text-field>
+                    <v-date-picker v-model="currentModifyItem.birth" @input="modifyBirthMenu = false"></v-date-picker></v-menu>
+                    <v-text-field
+                            prepend-icon="short_text"
+                            v-model="currentModifyItem.remarks"
+                            label="备注"
+                    ></v-text-field>
+                </v-form>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="gray darken-1" flat="flat" @click="modifyDialog = false">取消</v-btn>
+                    <v-btn color="blue darken-1" flat="flat" @click="saveItem">保存</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
     </v-flex>
 </template>
 
@@ -226,6 +304,11 @@
                 search: '',
                 dataTablePageConfig: [
                     10, 25, { "text": "$vuetify.dataIterator.rowsPerPageAll", "value": -1 }
+                ],
+                sex: [
+                    { value: 'UNKNOWN', name: '未知' },
+                    { value: 'MALE', name: '男' },
+                    { value: 'FEMALE', name: '女' },
                 ],
                 headers: [
                     { text: "ID", value: "id", align:'center' },
@@ -264,13 +347,23 @@
                 availableUserGroupsForSelected: [],
                 searchAvailableUserGroupsCriteriaForSelected: null,
                 selectedUserGroupForSelected: null,
-                joinUserGroupForSelectedDialog: false
+                joinUserGroupForSelectedDialog: false,
+                resetPasswordConfirmDialog: false,
+                currentResetPasswordUser: null,
+                modifyDialog: false,
+                currentModifyItem: null,
+                modifyBirthMenu: false,
+                modifyValid: false
             }
         },
         mounted: function () {
             this.refreshEmployees()
         },
         methods: {
+            modifyItem(item) {
+                this.currentModifyItem = this.clone(item.userInformation)
+                this.modifyDialog = true
+            },
             refreshEmployees () {
                 this.$post('/user/employees', {}, (data) => {
                     this.employees = data['content']
@@ -352,6 +445,33 @@
                 }, ()=>{
                     this.selectedItem = []
                     this.joinUserGroupForSelectedDialog = false
+                    this.refreshEmployees()
+                })
+            },
+            resetPassword() {
+                if (this.currentResetPasswordUser) {
+                    this.$post('/user/reset_password', { userId: this.currentResetPasswordUser.id }, () => {
+                        this.resetPasswordConfirmDialog = false
+                        this.currentResetPasswordUser = null
+                    })
+                }
+            },
+            showResetPasswordConfirmDialog(user) {
+                this.resetPasswordConfirmDialog = true
+                this.currentResetPasswordUser = user
+            },
+            saveItem() {
+                this.$post('/user_information/save', {
+                    userInformationId: this.currentModifyItem.id,
+                    name: this.currentModifyItem.name,
+                    phoneNumber: this.currentModifyItem.phoneNumber,
+                    sex: this.currentModifyItem.sex,
+                    birth: this.currentModifyItem.birth,
+                    remarks: this.currentModifyItem.remarks
+                }, () => {
+                    this.currentModifyItem = null
+                    this.modifyDialog = false
+                    this.editRemarksDialog = false
                     this.refreshEmployees()
                 })
             }

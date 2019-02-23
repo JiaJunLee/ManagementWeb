@@ -6,12 +6,15 @@ import VueAxios from 'vue-axios'
 import Vuex from 'vuex'
 import Qs from 'qs'
 import 'material-design-icons-iconfont/dist/material-design-icons.css'
+import ElementUI from 'element-ui';
+import 'element-ui/lib/theme-chalk/index.css';
 
 axios.defaults.baseURL = 'http://localhost:8080'
 axios.defaults.withCredentials = true
 
 Vue.use(VueAxios, axios)
 Vue.use(Vuex)
+Vue.use(ElementUI)
 
 Vue.config.productionTip = false
 Vue.config.devtools = true

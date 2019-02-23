@@ -94,7 +94,9 @@
         </v-dialog>
         <v-layout justify-center v-if="that.$store.state.user">
           <EmployeeManagement v-if="currentSelectedPage === 'employee'"></EmployeeManagement>
+          <CustomerTypeManagement v-if="currentSelectedPage === 'customer_type'"></CustomerTypeManagement>
           <CustomerManagement v-if="currentSelectedPage === 'customer'"></CustomerManagement>
+          <CustomerManagementNew v-if="currentSelectedPage === 'customer_new'"></CustomerManagementNew>
           <UserGroup v-if="currentSelectedPage === 'user_group'"></UserGroup>
           <IncomingCustomerManagement v-if="currentSelectedPage === 'incoming_customer'"></IncomingCustomerManagement>
         </v-layout>
@@ -129,9 +131,13 @@ import CustomerManagement from "./components/CustomerManagement";
 import EmployeeManagement from "./components/EmployeeManagement";
 import UserGroup from "./components/UserGroup";
 import IncomingCustomerManagement from "./components/IncomingCustomer";
+import CustomerTypeManagement from "./components/CustomerTypeManagement";
+import CustomerManagementNew from "./components/CustomerManagementNew";
 export default {
     name: 'App',
-    components: {IncomingCustomerManagement, UserGroup, EmployeeManagement, CustomerManagement },
+    components: {
+        CustomerManagementNew,
+        CustomerTypeManagement, IncomingCustomerManagement, UserGroup, EmployeeManagement, CustomerManagement },
     data: function () {
         return {
             that: this,
@@ -195,7 +201,9 @@ export default {
                             this.items = [
                                 { icon: "person", text: "职员", page: 'employee' },
                                 { icon: "group", text: "职员用户组", page: 'user_group' },
+                                { icon: "extension", text: "客户类型", page: 'customer_type' },
                                 { icon: "record_voice_over", text: "客户", page: 'customer' },
+                                { icon: "record_voice_over", text: "客户（新）", page: 'customer_new' },
                                 { icon: "how_to_reg", text: "入件客户", page: 'incoming_customer' }
                             ]
                         }

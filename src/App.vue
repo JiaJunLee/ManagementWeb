@@ -19,9 +19,9 @@
           </v-list-tile>
         </template>
       </v-list>
-      <v-alert :value="true" color="grey lighten-1" icon="warning" v-else>请登入账号</v-alert>
+      <v-alert :value="true" color="grey darken-1" icon="warning" v-else>请登入账号</v-alert>
     </v-navigation-drawer>
-    <v-toolbar :clipped-left="$vuetify.breakpoint.lgAndUp" color="blue-grey darken-4" dark app fixed>
+    <v-toolbar :clipped-left="$vuetify.breakpoint.lgAndUp" dark app fixed>
       <v-toolbar-title>
         <v-layout  justify-center align-center>
           <v-toolbar-side-icon @click.stop="drawer = !drawer"></v-toolbar-side-icon>
@@ -31,8 +31,9 @@
       <v-spacer></v-spacer>
       <v-btn icon large v-if="that.$store.state.user" @click="changePasswordDialog = true">
         <v-tooltip bottom>
-          <v-avatar size="34px" slot="activator">
-            <img src="http://p0.ifengimg.com/a/2018_45/bcc07f5bc8bf9cf_size26_w640_h584.jpg" alt="Vuetify">
+          <v-avatar size="34px" slot="activator" color="white">
+            <span class="black--text headline" v-if="that.$store.state.user">{{ that.$store.state.user.username.substr(0, 1).toUpperCase() }}</span>
+            <v-icon v-else>account_circle</v-icon>
           </v-avatar>
           <span>修改密码</span>
         </v-tooltip>
@@ -194,7 +195,8 @@ export default {
                         }
                         if (this.$store.state.user.type === 'EMPLOYEE') {
                             this.items = [
-                                { icon: "record_voice_over", text: "客户", page: 'customer'},
+                                // { icon: "record_voice_over", text: "客户", page: 'customer'},
+                                { icon: "record_voice_over", text: "客户（新）", page: 'customer_new' },
                                 { icon: "how_to_reg", text: "入件客户", page: 'incoming_customer' }
                             ]
                         } else if (this.$store.state.user.type === 'ADMINISTRATOR') {
@@ -202,7 +204,7 @@ export default {
                                 { icon: "person", text: "职员", page: 'employee' },
                                 { icon: "group", text: "职员用户组", page: 'user_group' },
                                 { icon: "extension", text: "客户类型", page: 'customer_type' },
-                                { icon: "record_voice_over", text: "客户", page: 'customer' },
+                                // { icon: "record_voice_over", text: "客户", page: 'customer' },
                                 { icon: "record_voice_over", text: "客户（新）", page: 'customer_new' },
                                 { icon: "how_to_reg", text: "入件客户", page: 'incoming_customer' }
                             ]
@@ -248,3 +250,54 @@ export default {
     }
 };
 </script>
+
+<style>
+
+  @-webkit-keyframes Gradient {
+    0% {
+      background-position: 0% 50%
+    }
+    50% {
+      background-position: 100% 50%
+    }
+    100% {
+      background-position: 0% 50%
+    }
+  }
+
+  @-moz-keyframes Gradient {
+    0% {
+      background-position: 0% 50%
+    }
+    50% {
+      background-position: 100% 50%
+    }
+    100% {
+      background-position: 0% 50%
+    }
+  }
+
+  @keyframes Gradient {
+    0% {
+      background-position: 0% 50%
+    }
+    50% {
+      background-position: 100% 50%
+    }
+    100% {
+      background-position: 0% 50%
+    }
+  }
+
+  nav.v-toolbar.v-toolbar--clipped.v-toolbar--fixed.theme--dark {
+    background: linear-gradient(-45deg, #EE7752, #1867c0, #009688);
+    background-size: 400% 400%;
+    -webkit-animation: Gradient 10s ease infinite;
+    -moz-animation: Gradient 10s ease infinite;
+    animation: Gradient 10s ease infinite;
+  }
+
+  nav.v-toolbar.theme--dark.primary {
+    background-color: rgba(0,0,0,0.8) !important;
+  }
+</style>

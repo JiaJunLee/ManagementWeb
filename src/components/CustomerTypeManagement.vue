@@ -1,7 +1,7 @@
 <template>
     <div style="width: 100%;">
         <div class="title-wrapper">
-            <h2>客户类型管理</h2>
+            <h1>客户类型管理</h1>
             <el-button size="small" type="primary" icon="el-icon-plus" round @click="createDialogVisible = true">添加客户类型</el-button>
         </div>
         <el-table border stripe size="mini" style="width: 100%;" :data="customerTypes" :height="tableHeight" v-loading="onLoading">
@@ -155,5 +155,6 @@
 <style>
     .el-dialog__body {
         padding-bottom: 6px !important;
+        padding-top: 6px !important;
     }
 </style>

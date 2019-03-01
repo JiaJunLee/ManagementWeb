@@ -9,6 +9,7 @@ import 'material-design-icons-iconfont/dist/material-design-icons.css'
 import ElementUI from 'element-ui';
 import 'element-ui/lib/theme-chalk/index.css';
 
+// axios.defaults.baseURL = 'http://129.204.16.191:8080'
 axios.defaults.baseURL = 'http://localhost:8080'
 axios.defaults.withCredentials = true
 
@@ -27,7 +28,7 @@ Vue.prototype.clone = function (object) {
 }
 
 Vue.prototype.$post = function (path, data, callback, error, exception) {
-    Vue.axios.post(path, Qs.stringify(data)).then((response)=>{
+    Vue.axios.post(path, Qs.stringify(data,{arrayFormat: 'repeat'})).then((response)=>{
         if (response.data.resultCode !== 200) {
             this.$alertMessage(response.data.message, 'error')
             if (error) {

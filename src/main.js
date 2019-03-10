@@ -9,8 +9,8 @@ import 'material-design-icons-iconfont/dist/material-design-icons.css'
 import ElementUI from 'element-ui';
 import 'element-ui/lib/theme-chalk/index.css';
 
-// axios.defaults.baseURL = 'http://129.204.16.191:8080'
-axios.defaults.baseURL = 'http://localhost:8080'
+axios.defaults.baseURL = 'http://129.204.16.191:8080/management-server-1.0'
+// axios.defaults.baseURL = 'http://localhost:8080'
 axios.defaults.withCredentials = true
 
 Vue.use(VueAxios, axios)

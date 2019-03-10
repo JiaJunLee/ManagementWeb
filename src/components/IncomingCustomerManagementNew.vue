@@ -1,10 +1,10 @@
 <template>
     <div style="width: 100%;">
         <div class="title-wrapper">
-            <h1>客户管理</h1>
+            <h1>入件客户管理</h1>
             <div v-if="that.$store.state.user.type === 'ADMINISTRATOR'">
                 <el-button size="small" type="info" icon="el-icon-share" @click="showBatchJoinUserGroupsDialog">批量设置可见职员用户组</el-button>
-                <el-button size="small" type="primary" icon="el-icon-plus" @click="createDialogVisible = true">添加客户</el-button>
+                <el-button size="small" type="primary" icon="el-icon-plus" @click="createDialogVisible = true">添加入件客户</el-button>
                 <el-button size="small" type="danger" icon="el-icon-delete" @click="deleteAllCustomers">批量删除</el-button>
             </div>
         </div>
@@ -57,13 +57,8 @@
             <el-table-column label="性别" width="50">
                 <template slot-scope="scope">{{ { FEMALE: '女', MALE: '男', UNKNOWN: '未知' }[scope.row.sex] || '未知' }}</template>
             </el-table-column>
-            <el-table-column prop="remarks" label="备注">
-                <template slot-scope="scope">
-                    {{ getLatestRemark(scope.row.remarksNew) ? getLatestRemark(scope.row.remarksNew).remark || '无' : '无' }}
-                    {{ getLatestRemark(scope.row.remarksNew) ? `[${ getLatestRemark(scope.row.remarksNew).userInformation ? getLatestRemark(scope.row.remarksNew).userInformation.name || '未知用户' : '未知用户' }]` : ''}}
-                    <el-button size="mini" type="text" @click="openRemarksDialog(scope.row)">查看或添加记录</el-button>
-                </template>
-            </el-table-column>
+            <el-table-column fixed prop="income" label="收佣"></el-table-column>
+            <el-table-column fixed prop="cost" label="成本"></el-table-column>
             <el-table-column label="可见职员组"
                              prop="visibilityUserGroups"
                              :filters="allUserGroups"
@@ -98,7 +93,7 @@
         </el-pagination>
 
         <!-- CREATE DIALOG -->
-        <el-dialog title="新建客户" :visible.sync="createDialogVisible" width="36%">
+        <el-dialog title="新建入件客户" :visible.sync="createDialogVisible" width="36%">
             <el-form label-width="120px" :model="createCustomerForm" size="small" ref="createCustomerTypeFormRef">
                 <el-form-item label="姓名" prop="name" :rules="[{ required: true, message: '姓名不能为空', trigger: 'blur' }]">
                     <el-input v-model="createCustomerForm.name"></el-input>
@@ -123,8 +118,11 @@
                         <el-radio-button label="FEMALE">女</el-radio-button>
                     </el-radio-group>
                 </el-form-item>
-                <el-form-item label="备注" prop="remarks">
-                    <el-input type="textarea" v-model="createCustomerForm.remarks"></el-input>
+                <el-form-item label="收佣" prop="income" :rules="[{ required: true, message: '收佣不能为空', trigger: 'blur' }]">
+                    <el-input v-model="createCustomerForm.income"></el-input>
+                </el-form-item>
+                <el-form-item label="成本" prop="cost" :rules="[{ required: true, message: '成本不能为空', trigger: 'blur' }]">
+                    <el-input v-model="createCustomerForm.cost"></el-input>
                 </el-form-item>
                 <el-form-item label="可见职员组">
                     <div style="height: 200px; overflow-y: auto">
@@ -166,7 +164,7 @@
 
         <!-- BATCH JOIN USER GROUPS -->
         <el-dialog title="批量设置可见用户组" width="36%" :visible.sync="batchJoinUserGroupsDialogVisible">
-            <p>此操作将移除客户此前的所有可见用户组，再重新添加所选可见用户组</p>
+            <p>此操作将移除入件客户此前的所有可见用户组，再重新添加所选可见用户组</p>
             <div style="height: 200px; overflow-y: auto">
                 <el-checkbox-group v-model="batchJoinUserGroupsSelected" size="small">
                     <el-checkbox v-for="userGroup in userGroups" :key="userGroup.id" border :label="userGroup.id">{{ userGroup.name }}</el-checkbox>
@@ -179,8 +177,8 @@
         </el-dialog>
 
         <!-- JOIN USER GROUPS -->
-        <el-dialog title="批量设置可见用户组" width="36%" :visible.sync="joinUserGroupsDialogVisible">
-            <p>此操作将移除客户此前的所有可见用户组，再重新添加所选可见用户组</p>
+        <el-dialog title="设置可见用户组" width="36%" :visible.sync="joinUserGroupsDialogVisible">
+            <p>此操作将移除入件客户此前的所有可见用户组，再重新添加所选可见用户组</p>
             <div style="height: 200px; overflow-y: auto">
                 <el-checkbox-group v-model="joinUserGroupsSelected" size="small">
                     <el-checkbox v-for="userGroup in userGroups" :key="userGroup.id" border :label="userGroup.id">{{ userGroup.name }}</el-checkbox>
@@ -193,7 +191,7 @@
         </el-dialog>
 
         <!-- EDIT CUSTOMER DIALOG -->
-        <el-dialog title="编辑客户" :visible.sync="editCustomerDialogVisible" width="36%" v-if="editCustomer">
+        <el-dialog title="编辑入件客户" :visible.sync="editCustomerDialogVisible" width="36%" v-if="editCustomer">
             <el-form label-width="120px" :model="editCustomer" size="small" ref="createCustomerTypeFormRef">
                 <el-form-item label="姓名" prop="name" :rules="[{ required: true, message: '姓名不能为空', trigger: 'blur' }]">
                     <el-input v-model="editCustomer.name"></el-input>
@@ -218,7 +216,13 @@
                         <el-radio-button label="FEMALE">女</el-radio-button>
                     </el-radio-group>
                 </el-form-item>
-                <el-form-item label="可见职员组" v-if="that.$store.state.user.type === 'ADMINISTRATOR'">
+                <el-form-item label="收佣" prop="income" :rules="[{ required: true, message: '收佣不能为空', trigger: 'blur' }]">
+                    <el-input v-model="editCustomer.income"></el-input>
+                </el-form-item>
+                <el-form-item label="成本" prop="cost" :rules="[{ required: true, message: '成本不能为空', trigger: 'blur' }]">
+                    <el-input v-model="editCustomer.cost"></el-input>
+                </el-form-item>
+                <el-form-item label="可见职员组">
                     <div style="height: 200px; overflow-y: auto">
                         <el-checkbox-group v-model="editCustomer.visibilityUserGroupIds">
                             <el-checkbox v-for="userGroup in userGroups" :key="userGroup.id" border :label="userGroup.id">{{ userGroup.name }}</el-checkbox>
@@ -253,7 +257,8 @@
                   phoneNumber: '',
                   sex: 'UNKNOWN',
                   visibilityUserGroupIds: [],
-                  remarks: ''
+                  income: '',
+                  cost: ''
               },
               pageable: {
                   currentPageIndex: 1,
@@ -300,11 +305,11 @@
             },
             refreshSummary() {
                 if (this.$store.state.user.type === 'ADMINISTRATOR') {
-                    this.$post('/customer/summary', {}, (data) => {
+                    this.$post('/incoming_customer/summary', {}, (data) => {
                         this.customerSummary = data['content']
                     })
                 } else {
-                    this.$post('/customer/summary-employee', {
+                    this.$post('/incoming_customer/summary-employee', {
                         userId: this.$store.state.user.id
                     }, (data) => {
                         this.customerSummary = data['content']
@@ -326,22 +331,22 @@
             refreshCustomers() {
                 this.onLoading = true
                 if (this.$store.state.user.type === 'ADMINISTRATOR') {
-                    this.$post('/customer/page', {
+                    this.$post('/incoming_customer/page', {
                         pageIndex: this.pageable.currentPageIndex - 1,
                         pageSize: this.pageable.pageSize
                     }, (data) => {
                         this.pageable.total = data['content']['total']
-                        this.customers = data['content']['customers']
+                        this.customers = data['content']['incomingCustomers']
                         this.onLoading = false
                     })
                 } else {
-                    this.$post('/customer/page-employee', {
+                    this.$post('/incoming_customer/page-employee', {
                         userId: this.$store.state.user.id,
                         pageIndex: this.pageable.currentPageIndex - 1,
                         pageSize: this.pageable.pageSize
                     }, (data) => {
                         this.pageable.total = data['content']['total']
-                        this.customers = data['content']['customers']
+                        this.customers = data['content']['incomingCustomers']
                         this.onLoading = false
                     })
                 }
@@ -354,7 +359,7 @@
             },
             createCustomer() {
                 this.createDialogVisible = false
-                this.$post('/customer/save', this.createCustomerForm, () => {
+                this.$post('/incoming_customer/save', this.createCustomerForm, () => {
                     this.createCustomerForm = {
                         name: '',
                         customerTypeId: '',
@@ -367,12 +372,12 @@
                 })
             },
             deleteCustomer(customer) {
-                this.$confirm('此操作将永久删除该客户, 是否继续?', '提示', {
+                this.$confirm('此操作将永久删除该入件客户, 是否继续?', '提示', {
                     confirmButtonText: '确定',
                     cancelButtonText: '取消',
                     type: 'warning'
                 }).then(() => {
-                    this.$post('/customer/delete', { customerId: customer.id }, () => {
+                    this.$post('/incoming_customer/delete', { incomingCustomerId: customer.id }, () => {
                         this.refreshCustomers()
                         this.refreshSummary()
                     })
@@ -382,7 +387,7 @@
             },
             deleteAllCustomers() {
                 if (this.selectedCustomers.length === 0) {
-                    this.$message.warning('至少要选择一位客户')
+                    this.$message.warning('至少要选择一位入件客户')
                     return
                 }
                 this.$confirm('此操作将永久删除所选客户, 是否继续?', '提示', {
@@ -390,7 +395,7 @@
                     cancelButtonText: '取消',
                     type: 'warning'
                 }).then(() => {
-                    this.$post('/customer/delete-all', { customerIds: this.selectedCustomers.reduce((pre, cur) => { pre.push(cur.id); return pre }, []) }, () => {
+                    this.$post('/incoming_customer/delete-all', { incomingCustomerIds: this.selectedCustomers.reduce((pre, cur) => { pre.push(cur.id); return pre }, []) }, () => {
                         this.refreshCustomers()
                         this.refreshSummary()
                     })
@@ -428,8 +433,8 @@
                     this.$message.warning('至少要选择一个用户组')
                     return
                 }
-                this.$post('/customer/visibility-all', {
-                    customerIds: this.batchJoinUserGroupsCustomerIds,
+                this.$post('/incoming_customer/visibility-all', {
+                    incomingCustomerIds: this.batchJoinUserGroupsCustomerIds,
                     userGroupIds: this.batchJoinUserGroupsSelected
                 }, () => {
                     this.batchJoinUserGroupsDialogVisible = false
@@ -439,7 +444,7 @@
             },
             showBatchJoinUserGroupsDialog () {
                 if (this.selectedCustomers.length === 0) {
-                    this.$message.warning('至少要选择一位客户')
+                    this.$message.warning('至少要选择一位入件客户')
                     return
                 }
                 this.batchJoinUserGroupsCustomerIds = this.selectedCustomers.reduce((pre, cur) => { pre.push(cur.id); return pre }, [])
@@ -454,8 +459,8 @@
                     this.$message.warning('至少要选择一个用户组')
                     return
                 }
-                this.$post('/customer/visibility', {
-                    customerId: this.joinUserGroupsCustomer.id,
+                this.$post('/incoming_customer/visibility', {
+                    incomingCustomerId: this.joinUserGroupsCustomer.id,
                     userGroupIds: this.joinUserGroupsSelected
                 }, () => {
                     this.joinUserGroupsCustomer = undefined
@@ -472,7 +477,7 @@
             },
             saveCustomer () {
                 this.editCustomerDialogVisible = false
-                this.$post('/customer/update', this.editCustomer, () => {
+                this.$post('/incoming_customer/update', this.editCustomer, () => {
                     this.editCustomer = undefined
                     this.refreshCustomers()
                     this.refreshSummary()

@@ -100,6 +100,7 @@
           <CustomerManagementNew v-if="currentSelectedPage === 'customer_new'"></CustomerManagementNew>
           <UserGroup v-if="currentSelectedPage === 'user_group'"></UserGroup>
           <IncomingCustomerManagement v-if="currentSelectedPage === 'incoming_customer'"></IncomingCustomerManagement>
+          <IncomingCustomerManagementNew v-if="currentSelectedPage === 'incoming_customer_new'"></IncomingCustomerManagementNew>
         </v-layout>
         <v-layout justify-center align-center v-else>
           <!--login-->
@@ -134,10 +135,11 @@ import UserGroup from "./components/UserGroup";
 import IncomingCustomerManagement from "./components/IncomingCustomer";
 import CustomerTypeManagement from "./components/CustomerTypeManagement";
 import CustomerManagementNew from "./components/CustomerManagementNew";
+import IncomingCustomerManagementNew from './components/IncomingCustomerManagementNew'
 export default {
     name: 'App',
     components: {
-        CustomerManagementNew,
+        CustomerManagementNew, IncomingCustomerManagementNew,
         CustomerTypeManagement, IncomingCustomerManagement, UserGroup, EmployeeManagement, CustomerManagement },
     data: function () {
         return {
@@ -196,8 +198,9 @@ export default {
                         if (this.$store.state.user.type === 'EMPLOYEE') {
                             this.items = [
                                 // { icon: "record_voice_over", text: "客户", page: 'customer'},
-                                { icon: "record_voice_over", text: "客户（新）", page: 'customer_new' },
-                                { icon: "how_to_reg", text: "入件客户", page: 'incoming_customer' }
+                                { icon: "record_voice_over", text: "客户", page: 'customer_new' },
+                                // { icon: "how_to_reg", text: "入件客户", page: 'incoming_customer' },
+                                { icon: "how_to_reg", text: "入件客户", page: 'incoming_customer_new' }
                             ]
                         } else if (this.$store.state.user.type === 'ADMINISTRATOR') {
                             this.items = [
@@ -205,8 +208,9 @@ export default {
                                 { icon: "group", text: "职员用户组", page: 'user_group' },
                                 { icon: "extension", text: "客户类型", page: 'customer_type' },
                                 // { icon: "record_voice_over", text: "客户", page: 'customer' },
-                                { icon: "record_voice_over", text: "客户（新）", page: 'customer_new' },
-                                { icon: "how_to_reg", text: "入件客户", page: 'incoming_customer' }
+                                { icon: "record_voice_over", text: "客户", page: 'customer_new' },
+                                // { icon: "how_to_reg", text: "入件客户", page: 'incoming_customer' },
+                                { icon: "how_to_reg", text: "入件客户", page: 'incoming_customer_new' }
                             ]
                         }
                         this.currentSelectedPage = this.items[0].page
